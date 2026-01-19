@@ -1,12 +1,22 @@
 package ada.tech.controller;
 
 import ada.tech.controller.request.ColorRequest;
+import ada.tech.controller.response.ColorResponse;
+import ada.tech.controller.response.ErrorResponse;
+import ada.tech.domain.entity.ColorEntity;
 import ada.tech.mapper.ColorMapper;
 import ada.tech.service.ColorService;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Valid;
+import jakarta.validation.Validator;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Set;
+
+import static ada.tech.mapper.ColorMapper.toResponse;
 
 @Path("/colors")
 @Produces(MediaType.APPLICATION_JSON)
@@ -14,52 +24,62 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ColorController {
 
-    private ColorService colorService;
+    private final ColorService colorService;
+    private final Validator validator;
 
     @GET
     public Response findAll() {
-        return Response.ok(
-                        colorService.findAll()
-                                .stream().map(ColorMapper::toResponse)
-                                .toList())
-                .build();
+        return Response.ok(colorService.findAll()).build();
     }
 
     @GET
     @Path("/{id}")
     public Response findById(@PathParam("id") Long id) {
-        var color = colorService.findById(id);
+        ColorResponse colorResponse = colorService.findById(id);
 
-        if (color == null) {
+        if (colorResponse == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
 
-        return Response.ok(color).build();
+        return Response.ok(colorResponse).build();
 
     }
 
     @POST
-    public Response save(ColorRequest request) {
+    public Response save(@Valid ColorRequest request) {
+        ColorResponse colorResponse = colorService.save(request);
 
-        var entity = colorService.save(request);
-        return Response
-                .status(Response.Status.CREATED)
-                .entity(request)
-                .build();
+        return Response.status(Response.Status.CREATED).entity(colorResponse).build();
+    }
+
+    @PUT
+    @Path("/{id}")
+    public Response update(@PathParam("id") Long id, ColorRequest request) {
+        Set<ConstraintViolation<ColorRequest>> violations = validator.validate(request);
+
+        if (!violations.isEmpty()){
+            ErrorResponse errorResponse = ErrorResponse.fromViolations(violations);
+
+            return Response
+                    .status(Response.Status.BAD_REQUEST)
+                    .entity(errorResponse)
+                    .build();
+        }
+
+
+        colorService.update(id, request);
+
+        return Response.status(Response.Status.NO_CONTENT).build();
     }
 
     @DELETE
     @Path("/{id}")
     public Response delete(@PathParam("id") Long id) {
-        colorService.delete(id);
-        return Response.status(Response.Status.NO_CONTENT).build();
+        if (colorService.delete(id)) {
+            return Response.status(Response.Status.NO_CONTENT).build();
+        }
+        return Response.status(Response.Status.NOT_FOUND).build();
     }
 
-    @PUT
-    @Path("/{id}")
-    public Response update(@PathParam("id") Long id, ColorRequest dto) {
-        colorService.update(id, dto);
-        return Response.ok().build();
-    }
 
 }

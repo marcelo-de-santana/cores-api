@@ -5,18 +5,28 @@ import ada.tech.controller.response.ColorResponse;
 import ada.tech.domain.entity.ColorEntity;
 
 public class ColorMapper {
+    public static ColorEntity toEntity(ColorRequest request, Long id) {
+        if (request == null || id == null) {
+            return null;
+        }
+
+        return ColorEntity.builder()
+                .id(id)
+                .name(request.name())
+                .hexadecimal(request.hexadecimal())
+                .build();
+    }
+
     public static ColorEntity toEntity(ColorRequest request) {
         if (request == null) {
             return null;
         }
 
         return ColorEntity.builder()
-                .id(request.id())
                 .name(request.name())
                 .hexadecimal(request.hexadecimal())
                 .build();
     }
-
 
     public static ColorResponse toResponse(ColorEntity entity) {
         if (entity == null) {

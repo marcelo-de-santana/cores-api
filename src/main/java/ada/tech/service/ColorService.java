@@ -1,8 +1,11 @@
 package ada.tech.service;
 
 import ada.tech.controller.request.ColorRequest;
+import ada.tech.controller.response.ColorResponse;
 import ada.tech.domain.entity.ColorEntity;
 import ada.tech.domain.repository.ColorRepository;
+import ada.tech.mapper.ColorMapper;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
@@ -10,6 +13,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import static ada.tech.mapper.ColorMapper.toEntity;
+import static ada.tech.mapper.ColorMapper.toResponse;
 
 @RequiredArgsConstructor
 public class ColorService {
@@ -17,19 +21,41 @@ public class ColorService {
     private ColorRepository colorRepository;
     private Logger logger;
 
-    public List<ColorEntity> findAll() {
-        return new ArrayList<>();
+    public List<ColorResponse> findAll() {
+        return colorRepository.findAll().stream().map(ColorMapper::toResponse).toList();
     }
 
-    public ColorEntity findById(Long id) {
-        return colorRepository.findById(id);
+    public ColorResponse findById(Long id) {
+        return toResponse(colorRepository.findById(id));
     }
 
-    public void save(ColorRequest request) {
-        logger.info(String.valueOf(request));
+    @Transactional
+    public ColorResponse save(ColorRequest request) {
+        ColorEntity colorEntity = toEntity(request);
 
-        colorRepository.persist(toEntity(request));
+        colorRepository.persist(colorEntity);
 
-        return colorRepository.findByName();
+        logger.info(colorEntity.toString());
+
+        return toResponse(colorEntity);
+    }
+
+    public void update(Long id, ColorRequest request) {
+        ColorEntity colorEntity = colorRepository.findById(id);
+
+        if (!request.name().isBlank()) {
+            colorEntity.setName(request.name());
+        }
+
+        if (!request.hexadecimal().isBlank()) {
+            colorEntity.setHexadecimal(request.hexadecimal());
+        }
+
+        colorRepository.persist(colorEntity);
+    }
+
+    @Transactional
+    public boolean delete(Long id) {
+        return colorRepository.deleteById(id);
     }
 }
